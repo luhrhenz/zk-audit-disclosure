@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { execFile } from "child_process";
-import { promisify } from "util";
-import path from "path";
+// Bundle the compiled circuit WITH the function. public/ assets are served
+// statically and are NOT available inside a serverless function's filesystem,
+// so we import the JSON as a module instead of reading it from disk.
+import circuit from "./circuit.json";
 
-const execFileAsync = promisify(execFile);
-
-// Absolute path to the standalone prover script.
-// Runs in plain Node.js, completely outside Turbopack's module system,
-// so @aztec/bb.js gets real import.meta.url / __dirname values.
-const PROVER_SCRIPT = path.resolve(process.cwd(), "scripts/prove.mjs");
+// Proving needs the full Node.js runtime (WASM + fs), not the Edge runtime.
+export const runtime = "nodejs";
+// Cold start + WASM init + witness execution can take a while; give it room.
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   let body: { secretHashHex?: string; contractAddressHex?: string };
@@ -27,24 +26,38 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { stdout, stderr } = await execFileAsync(
-      process.execPath, // node binary
-      [PROVER_SCRIPT, secretHashHex, contractAddressHex],
-      {
-        timeout: 120_000, // 2 min — witness execution can take a moment
-        maxBuffer: 10 * 1024 * 1024, // 10 MB stdout buffer
-      }
+    // Imported dynamically so the heavy Barretenberg/Noir WASM only loads when
+    // a proof is actually requested (keeps cold starts cheap for the page).
+    // These packages are listed in serverExternalPackages, so they are loaded
+    // as real node modules at runtime with correct filesystem paths.
+    const { BarretenbergSync, Fr } = await import("@aztec/bb.js");
+    const { Noir } = await import("@noir-lang/noir_js");
+
+    // 1. Compute pedersen_hash([secret_hash, contract_address]) — exactly the
+    //    constraint enforced by the Noir circuit.
+    const bb = await BarretenbergSync.new();
+    const commitmentFr = bb.pedersenHash(
+      [Fr.fromString(secretHashHex), Fr.fromString(contractAddressHex)],
+      0
     );
+    const commitment = commitmentFr.toString();
 
-    if (stderr) {
-      console.warn("[/api/prove] stderr:", stderr.slice(0, 500));
-    }
+    // 2. Execute the Noir witness — proves the constraint is satisfiable given
+    //    the private secret_hash, without revealing it.
+    const noir = new Noir(circuit as ConstructorParameters<typeof Noir>[0]);
+    const { witness } = await noir.execute({
+      secret_hash: secretHashHex,
+      contract_address: contractAddressHex,
+      commitment,
+    });
 
-    const result = JSON.parse(stdout.trim());
-    return NextResponse.json(result);
+    return NextResponse.json({
+      commitment,
+      witness: Buffer.from(witness).toString("hex"),
+      publicInputs: [contractAddressHex, commitment],
+    });
   } catch (err) {
-    const msg =
-      err instanceof Error ? err.message : "proof generation failed";
+    const msg = err instanceof Error ? err.message : "proof generation failed";
     console.error("[/api/prove]", msg);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

@@ -22,6 +22,19 @@ const nextConfig: NextConfig = {
     // this directory; __dirname is virtualised when the TS config is loaded.
     root: process.cwd(),
   },
+
+  // Vercel's file tracer can miss WASM that bb.js / acvm_js load at runtime
+  // (the paths are computed, not statically imported). Force-include them so
+  // the /api/prove serverless function actually ships the WASM binaries.
+  outputFileTracingIncludes: {
+    "/api/prove": [
+      "./node_modules/@aztec/bb.js/dest/node/**",
+      "./node_modules/@noir-lang/acvm_js/web/**",
+      "./node_modules/@noir-lang/acvm_js/nodejs/**",
+      "./node_modules/@noir-lang/noirc_abi/web/**",
+      "./node_modules/@noir-lang/noirc_abi/nodejs/**",
+    ],
+  },
 };
 
 export default nextConfig;
