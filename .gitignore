@@ -1,0 +1,41 @@
+# ───────────── Environment / secrets ─────────────
+.env
+.env.*
+.env.local
+!.env.example
+
+# ───────────── Node / Next.js (frontend) ─────────────
+node_modules/
+.next/
+out/
+build/
+.vercel/
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ───────────── Rust / Soroban (soroban-contract) ─────────────
+target/
+**/*.rs.bk
+Cargo.lock.orig
+
+# ───────────── Noir (noir-circuit) ─────────────
+# The generic `target/` rule above ignores noir-circuit/target entirely.
+# Re-include the directory, then ignore its build artifacts EXCEPT the
+# compiled circuit JSON, which scripts/prove.mjs loads at runtime.
+!noir-circuit/target/
+noir-circuit/target/*
+!noir-circuit/target/audit_disclosure.json
+
+# ───────────── Local agent / tooling config ─────────────
+.claude/
+
+# ───────────── OS / editor ─────────────
+.DS_Store
+*.pem
+.idea/
+.vscode/
+*.swp
