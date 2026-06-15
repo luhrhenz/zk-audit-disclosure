@@ -256,7 +256,7 @@ export default function Home() {
           </span>
           <span className="text-zinc-600 text-sm hidden sm:inline">—</span>
           <span className="text-zinc-500 text-sm hidden sm:inline">
-            Trustless Bug Bounty on Stellar
+            Trustless Disclosure Layer for Bug Bounties
           </span>
 
           {/* Real (testnet) vs Demo (mock) toggle — flip live on stage. */}
@@ -286,8 +286,9 @@ export default function Home() {
             Disclose a Vulnerability — Without Revealing It
           </h1>
           <p className="text-zinc-400 text-sm leading-relaxed">
-            Commit a zero-knowledge proof of your findings on-chain first.
-            Reveal only after a bounty is secured. Powered by Noir + Stellar.
+            Commit a zero-knowledge proof of your findings on-chain first — a
+            tamper-proof, timestamped record of what you found and when. Reveal
+            it on your terms, provably unchanged. Powered by Noir + Stellar.
           </p>
         </div>
 

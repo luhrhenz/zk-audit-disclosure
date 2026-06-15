@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ZK Audit Disclosure — Trustless Bug Bounty on Stellar",
-  description: "Prove you found a vulnerability without revealing it. Powered by zero-knowledge proofs on Stellar.",
+  title: "ZK Audit Disclosure — Trustless Disclosure Layer for Bug Bounties on Stellar",
+  description: "Prove you found a vulnerability — and timestamp it on-chain — without revealing it. Powered by zero-knowledge proofs on Stellar.",
 };
 
 export default function RootLayout({
