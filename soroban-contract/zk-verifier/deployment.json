@@ -1,0 +1,17 @@
+{
+  "network": "testnet",
+  "networkPassphrase": "Test SDF Network ; September 2015",
+  "contractId": "CBFWF7XLNS55UMRAL4BU73NW32RHF2ED3HJAFMJN4Q2URUB52BUDPXMU",
+  "wasmHash": "ad2c674ec0186034102a2260a4de5f4ab897e2fc78970481f64c05607774a37a",
+  "deployer": {
+    "alias": "auditor",
+    "address": "GBNY67EAZZ6G4ZRVBV5RKCJFGBBKJ7F47MAHO2JWISCLW6OT3ZMH23Y3"
+  },
+  "transactions": {
+    "upload": "e7ff027497e1df99a15f0d3b1afde8194ed1163da29e4c00a6aee0f0b993e566",
+    "deploy": "3500432f91383403cfd9cb6748230fe51bcc7fa41222950d3b820bdcf5c1f1b5"
+  },
+  "explorer": "https://stellar.expert/explorer/testnet/contract/CBFWF7XLNS55UMRAL4BU73NW32RHF2ED3HJAFMJN4Q2URUB52BUDPXMU",
+  "exportedFunctions": ["commit", "verify_and_claim", "get_commitment"],
+  "deployedAt": "2026-06-15"
+}

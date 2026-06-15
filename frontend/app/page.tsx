@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { initialMockStellar, txExplorerUrl } from "./config";
 
 // Mirrors ProofResult from ./utils/prover — defined here so the type is
 // available without a top-level import that would be evaluated during SSR.
@@ -67,6 +68,11 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Real (testnet) vs Demo (mock) — flip live during a presentation.
+  const [useMock, setUseMock] = useState<boolean>(initialMockStellar());
 
   // Step 3 state
   const [revealNotes, setRevealNotes] = useState("");
@@ -121,11 +127,43 @@ export default function Home() {
   }
 
   async function handleSubmitToStellar() {
+    if (!commitment) return;
+    setSubmitError(null);
     setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    setSubmitting(false);
-    setSubmitted(true);
-    setTimeout(() => setCurrentStep(3), 800);
+
+    if (useMock) {
+      // Demo mode — no network, instant.
+      await new Promise((r) => setTimeout(r, 1200));
+      setTxHash(null);
+      setSubmitting(false);
+      setSubmitted(true);
+      setTimeout(() => setCurrentStep(3), 800);
+      return;
+    }
+
+    // Real mode — submit the commitment on-chain via the testnet verifier.
+    try {
+      const res = await fetch("/api/commit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contractAddress: contractAddress.trim(),
+          commitment,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "submission failed");
+
+      setTxHash(data.txHash ?? null);
+      setSubmitting(false);
+      setSubmitted(true);
+      setTimeout(() => setCurrentStep(3), 800);
+    } catch (err) {
+      setSubmitting(false);
+      setSubmitError(
+        err instanceof Error ? err.message : "on-chain submission failed"
+      );
+    }
   }
 
   async function handleReveal() {
@@ -171,6 +209,24 @@ export default function Home() {
           <span className="text-zinc-500 text-sm hidden sm:inline">
             Trustless Bug Bounty on Stellar
           </span>
+
+          {/* Real (testnet) vs Demo (mock) toggle — flip live on stage. */}
+          <button
+            onClick={() => setUseMock((m) => !m)}
+            title="Toggle between a real Stellar testnet transaction and an instant local mock"
+            className={`ml-auto shrink-0 flex items-center gap-2 text-xs font-medium px-2.5 py-1.5 rounded-full border transition-colors ${
+              useMock
+                ? "border-amber-700 bg-amber-950/60 text-amber-400"
+                : "border-emerald-700 bg-emerald-950/60 text-emerald-400"
+            }`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                useMock ? "bg-amber-400" : "bg-emerald-400 animate-pulse"
+              }`}
+            />
+            {useMock ? "Demo (mock)" : "Live · testnet"}
+          </button>
         </div>
       </header>
 
@@ -346,23 +402,58 @@ export default function Home() {
               </div>
 
               {submitted ? (
-                <div className="rounded-lg bg-emerald-950 border border-emerald-800 px-4 py-3 text-sm text-emerald-400">
-                  Commitment submitted to Stellar testnet
+                <div className="rounded-lg bg-emerald-950 border border-emerald-800 px-4 py-3 space-y-2">
+                  <p className="text-sm text-emerald-400 font-medium">
+                    {useMock
+                      ? "Commitment submitted (demo / mock)"
+                      : "Commitment anchored on Stellar testnet"}
+                  </p>
+                  {txHash && (
+                    <div className="space-y-1">
+                      <p className="text-xs text-emerald-700">Transaction hash</p>
+                      <a
+                        href={txExplorerUrl(txHash)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block font-mono text-xs text-emerald-300 hover:text-emerald-200 underline underline-offset-2 truncate"
+                      >
+                        {txHash}
+                      </a>
+                      <a
+                        href={txExplorerUrl(txHash)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block text-xs text-emerald-500 hover:text-emerald-400"
+                      >
+                        View on stellar.expert ↗
+                      </a>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <>
+                  {submitError && (
+                    <div className="rounded-lg bg-red-950 border border-red-800 px-4 py-3 text-sm text-red-400 break-words">
+                      {submitError}
+                    </div>
+                  )}
                   <button
                     onClick={handleSubmitToStellar}
                     disabled={submitting}
                     className="w-full bg-zinc-100 hover:bg-white disabled:bg-zinc-700 disabled:text-zinc-500 text-zinc-950 font-semibold py-2.5 px-4 rounded-lg text-sm transition-colors"
                   >
                     {submitting
-                      ? "Submitting…"
+                      ? useMock
+                        ? "Submitting…"
+                        : "Submitting to testnet…"
+                      : useMock
+                      ? "Submit Commitment (Demo)"
                       : "Submit Commitment to Stellar"}
                   </button>
                   <p className="text-xs text-zinc-600 text-center">
-                    This proves you found a vulnerability without revealing what
-                    it is
+                    {useMock
+                      ? "Demo mode — no real transaction is sent"
+                      : "Sends a real transaction to the testnet verifier contract"}
                   </p>
                 </>
               )}

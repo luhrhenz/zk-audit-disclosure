@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
     "@noir-lang/acvm_js",
     "@noir-lang/noirc_abi",
     "@noir-lang/types",
+    "@stellar/stellar-sdk",
   ],
 
   turbopack: {
