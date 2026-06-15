@@ -1,16 +1,228 @@
 @import "tailwindcss";
 
 :root {
-  --background: #09090b;
+  --background: #07070a;
   --foreground: #f4f4f5;
+  --accent: #10b981; /* emerald-500 */
+  --accent-2: #6366f1; /* indigo-500 */
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
-* {
-  box-sizing: border-box;
+::selection {
+  background: color-mix(in oklab, var(--accent) 35%, transparent);
+  color: #ecfdf5;
+}
+
+/* ── Custom scrollbar ───────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 99px;
+  border: 2px solid #07070a;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+
+/* ── Ambient animated background ────────────────────────────── */
+.app-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  background: var(--background);
+}
+.app-bg::before {
+  /* aurora blobs */
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(40% 40% at 15% 20%, rgba(16, 185, 129, 0.18), transparent 70%),
+    radial-gradient(35% 35% at 85% 15%, rgba(99, 102, 241, 0.16), transparent 70%),
+    radial-gradient(45% 45% at 75% 85%, rgba(16, 185, 129, 0.1), transparent 70%);
+  filter: blur(40px);
+  animation: aurora 22s ease-in-out infinite alternate;
+}
+.grid-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 100%);
+}
+
+/* ── Glass surfaces ─────────────────────────────────────────── */
+.glass {
+  background: rgba(24, 24, 27, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.glass-card {
+  position: relative;
+  background: linear-gradient(180deg, rgba(24, 24, 27, 0.7), rgba(15, 15, 18, 0.7));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 1rem;
+  transition: border-color 0.35s ease, transform 0.35s ease, box-shadow 0.35s ease;
+}
+.glass-card.is-active {
+  border-color: rgba(16, 185, 129, 0.35);
+  box-shadow:
+    0 0 0 1px rgba(16, 185, 129, 0.1),
+    0 18px 50px -20px rgba(16, 185, 129, 0.25);
+}
+/* gradient hairline that appears on the active card's top edge */
+.glass-card.is-active::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  border-radius: 1rem 1rem 0 0;
+  background: linear-gradient(90deg, transparent, var(--accent), var(--accent-2), transparent);
+  opacity: 0.9;
+}
+
+/* ── Text + accents ─────────────────────────────────────────── */
+.gradient-text {
+  background: linear-gradient(120deg, #fff 0%, #d1fae5 35%, #a5b4fc 70%, #fff 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shine 8s linear infinite;
+}
+.glow-emerald {
+  box-shadow: 0 8px 30px -8px rgba(16, 185, 129, 0.55);
+}
+.btn-primary {
+  position: relative;
+  background: linear-gradient(180deg, #10b981, #059669);
+  color: #022c22;
+  transition: transform 0.18s ease, box-shadow 0.25s ease, filter 0.2s ease;
+  box-shadow: 0 8px 24px -10px rgba(16, 185, 129, 0.6);
+}
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+  box-shadow: 0 12px 32px -8px rgba(16, 185, 129, 0.75);
+}
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+.btn-primary:disabled {
+  background: #27272a;
+  color: #71717a;
+  box-shadow: none;
+}
+
+/* shimmer sweep used on primary buttons while idle */
+.shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+  background-size: 220% 100%;
+  animation: shimmer 3.5s ease-in-out infinite;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* ── Keyframes ──────────────────────────────────────────────── */
+@keyframes aurora {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+  50% { transform: translate3d(2%, -2%, 0) rotate(6deg) scale(1.08); }
+  100% { transform: translate3d(-2%, 2%, 0) rotate(-4deg) scale(1.04); }
+}
+@keyframes shine {
+  to { background-position: 200% center; }
+}
+@keyframes shimmer {
+  0% { background-position: 220% 0; }
+  60%, 100% { background-position: -120% 0; }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes spinSlow {
+  to { transform: rotate(360deg); }
+}
+@keyframes spinReverse {
+  to { transform: rotate(-360deg); }
+}
+@keyframes pulseRing {
+  0% { transform: scale(0.85); opacity: 0.7; }
+  70% { transform: scale(1.25); opacity: 0; }
+  100% { opacity: 0; }
+}
+@keyframes dash {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes floatY {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes growX {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+/* ── Animation utility classes ──────────────────────────────── */
+.animate-fade-up { animation: fadeUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-fade-in { animation: fadeIn 0.5s ease both; }
+.delay-1 { animation-delay: 0.08s; }
+.delay-2 { animation-delay: 0.16s; }
+.delay-3 { animation-delay: 0.24s; }
+.delay-4 { animation-delay: 0.32s; }
+.delay-5 { animation-delay: 0.4s; }
+.spin-slow { animation: spinSlow 9s linear infinite; }
+.spin-reverse { animation: spinReverse 6s linear infinite; }
+.float-y { animation: floatY 5s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .app-bg::before { animation: none; }
 }
