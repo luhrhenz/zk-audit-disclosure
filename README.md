@@ -1,15 +1,28 @@
-# ZK Audit Disclosure — Trustless Bug Bounty on Stellar
+# ZK Audit Disclosure — Trustless Disclosure Layer for Bug Bounties on Stellar
 
-> Prove you found a vulnerability **before** you reveal it — without trusting the project to pay up, and without leaking the bug to anyone who hasn't earned it.
+> Prove you found a vulnerability **before** you reveal it — and timestamp that proof on-chain so nobody can dispute *what* you disclosed or *when*.
 
-ZK Audit Disclosure is a zero-knowledge bug-bounty primitive. A security researcher cryptographically **commits** to a vulnerability they've discovered in a specific contract, anchors that commitment on **Stellar (Soroban)**, and can later **reveal** the details and **prove** — in zero knowledge — that the bug they're disclosing is exactly the one they committed to earlier.
+ZK Audit Disclosure is a zero-knowledge **disclosure primitive** for bug bounties. A security researcher cryptographically **commits** to a vulnerability they've discovered in a specific contract, anchors that commitment on **Stellar (Soroban)**, and can later **reveal** the details and **prove** — in zero knowledge — that the bug they're disclosing is exactly the one they committed to earlier.
 
-This solves the classic bug-bounty standoff:
+It addresses one specific, otherwise-untrustworthy part of the bug-bounty process: **proving priority and authorship of a disclosure without leaking it.**
 
-- **Researchers** fear disclosing a bug only to be ignored, lowballed, or front-run.
-- **Projects** fear paying for vague or fabricated "findings."
+- **Researchers** fear disclosing a bug only to be ignored, front-run, or told "we already knew that."
+- A timestamped, on-chain ZK commitment gives them a tamper-proof record of *what* they found and *when* — revealed only when they choose, provably unchanged.
 
-A timestamped, on-chain ZK commitment gives the researcher a tamper-proof proof of *priority and authorship* without revealing the exploit, and gives the project cryptographic assurance that the later disclosure matches the original commitment.
+### Scope — what this is, and what it deliberately is not
+
+This tool proves **integrity, priority, and knowledge** of a disclosure. It does **three** things and nothing more:
+
+1. **Integrity** — the revealed finding is exactly what was committed (you can't change your story).
+2. **Priority** — the commitment is timestamped on-chain (you were first; no front-running).
+3. **Knowledge** — you actually hold the secret preimage, not just a copied hash.
+
+It is **intentionally not** an escrow or payment system, and it does **not** judge whether a finding is *valid*:
+
+- **Payment stays off-chain — by design.** Bounty negotiation and payout are human/legal decisions; forcing them on-chain would reintroduce custody risk, oracle problems, and disputes — exactly the trust this tool removes. The contract never holds, transfers, or releases funds.
+- **Validity is out of scope.** The proof attests that you knew *a secret*, not that the secret describes a real exploit. Assessing whether the disclosed bug is legitimate is the project's job during review — same as any bug bounty today. This tool just makes the "who disclosed what, and when" part impossible to forge.
+
+In short: it is the **trustless disclosure layer** a bounty program plugs in — not the bounty escrow itself.
 
 ---
 
