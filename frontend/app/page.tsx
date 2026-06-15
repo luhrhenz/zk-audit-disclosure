@@ -77,9 +77,14 @@ export default function Home() {
   // Step 3 state
   const [revealNotes, setRevealNotes] = useState("");
   const [verifying, setVerifying] = useState(false);
+  const [verifyPhase, setVerifyPhase] = useState<"hashing" | "claiming" | null>(
+    null
+  );
   const [verifyResult, setVerifyResult] = useState<
     "verified" | "mismatch" | null
   >(null);
+  const [verifyTxHash, setVerifyTxHash] = useState<string | null>(null);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
 
   const commitment = proofResult?.commitment ?? null;
   const isGenerating = proofPhase !== "idle" && proofPhase !== "done";
@@ -169,21 +174,65 @@ export default function Home() {
   async function handleReveal() {
     if (!revealNotes.trim() || !proofResult) return;
     setVerifying(true);
+    setVerifyError(null);
+    setVerifyTxHash(null);
+    setVerifyPhase("hashing");
 
-    // Re-derive the commitment from the reveal notes and compare.
-    // We re-run generateProof so the comparison uses the same Pedersen path.
+    // 1. Re-derive the commitment from the reveal notes and compare. We re-run
+    //    generateProof so the comparison uses the same Pedersen path.
+    let rehashCommitment: string;
     try {
       const { generateProof } = await import("./utils/prover");
       const rehash = await generateProof(
         revealNotes.trim(),
         contractAddress.trim()
       );
-      setVerifyResult(
-        rehash.commitment === proofResult.commitment ? "verified" : "mismatch"
-      );
+      rehashCommitment = rehash.commitment;
     } catch {
       setVerifyResult("mismatch");
+      setVerifyPhase(null);
+      setVerifying(false);
+      return;
     }
+
+    if (rehashCommitment !== proofResult.commitment) {
+      setVerifyResult("mismatch");
+      setVerifyPhase(null);
+      setVerifying(false);
+      return;
+    }
+
+    // 2. Hash matches. In demo mode we stop here; in live mode we flip the
+    //    on-chain record to verified via verify_and_claim.
+    if (useMock) {
+      setVerifyResult("verified");
+      setVerifyPhase(null);
+      setVerifying(false);
+      return;
+    }
+
+    setVerifyPhase("claiming");
+    try {
+      const res = await fetch("/api/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contractAddress: contractAddress.trim(),
+          commitment: proofResult.commitment,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "on-chain verification failed");
+      setVerifyTxHash(data.txHash ?? null);
+      setVerifyResult("verified");
+    } catch (err) {
+      // The Pedersen hash matched, but the on-chain claim failed (e.g. already
+      // verified, or no commitment stored for this auditor).
+      setVerifyError(
+        err instanceof Error ? err.message : "on-chain verification failed"
+      );
+    }
+    setVerifyPhase(null);
     setVerifying(false);
   }
 
@@ -501,6 +550,7 @@ export default function Home() {
                   onChange={(e) => {
                     setRevealNotes(e.target.value);
                     setVerifyResult(null);
+                    setVerifyError(null);
                   }}
                   placeholder="Paste your original vulnerability notes exactly as written..."
                   rows={5}
@@ -513,30 +563,64 @@ export default function Home() {
                 <div className="rounded-lg bg-zinc-800 border border-zinc-700 px-4 py-3 flex items-center gap-3">
                   <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin shrink-0" />
                   <p className="text-sm text-zinc-200">
-                    Recomputing Pedersen commitment…
+                    {verifyPhase === "claiming"
+                      ? "Claiming on-chain (verify_and_claim)…"
+                      : "Recomputing Pedersen commitment…"}
                   </p>
                 </div>
               )}
 
               {verifyResult === null && !verifying && (
-                <button
-                  onClick={handleReveal}
-                  disabled={!revealNotes.trim()}
-                  className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:bg-zinc-700 disabled:text-zinc-500 text-zinc-950 font-semibold py-2.5 px-4 rounded-lg text-sm transition-colors"
-                >
-                  Reveal Vulnerability
-                </button>
+                <>
+                  {verifyError && (
+                    <div className="rounded-lg bg-red-950 border border-red-800 px-4 py-3 text-sm text-red-400 break-words">
+                      {verifyError}
+                    </div>
+                  )}
+                  <button
+                    onClick={handleReveal}
+                    disabled={!revealNotes.trim()}
+                    className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:bg-zinc-700 disabled:text-zinc-500 text-zinc-950 font-semibold py-2.5 px-4 rounded-lg text-sm transition-colors"
+                  >
+                    Reveal Vulnerability
+                  </button>
+                </>
               )}
 
               {verifyResult === "verified" && (
-                <div className="rounded-lg bg-emerald-950 border border-emerald-700 px-4 py-4 space-y-1">
+                <div className="rounded-lg bg-emerald-950 border border-emerald-700 px-4 py-4 space-y-2">
                   <p className="text-emerald-400 font-semibold text-sm">
-                    Proof verified — vulnerability disclosed
+                    {useMock
+                      ? "Proof verified — vulnerability disclosed"
+                      : "Verified & claimed on-chain — vulnerability disclosed"}
                   </p>
                   <p className="text-emerald-700 text-xs">
                     Pedersen hash matches the on-chain commitment. The protocol
                     confirms prior knowledge without leaking the secret.
                   </p>
+                  {verifyTxHash && (
+                    <div className="space-y-1 pt-1">
+                      <p className="text-xs text-emerald-700">
+                        verify_and_claim transaction
+                      </p>
+                      <a
+                        href={txExplorerUrl(verifyTxHash)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block font-mono text-xs text-emerald-300 hover:text-emerald-200 underline underline-offset-2 truncate"
+                      >
+                        {verifyTxHash}
+                      </a>
+                      <a
+                        href={txExplorerUrl(verifyTxHash)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block text-xs text-emerald-500 hover:text-emerald-400"
+                      >
+                        View on stellar.expert ↗
+                      </a>
+                    </div>
+                  )}
                 </div>
               )}
 
